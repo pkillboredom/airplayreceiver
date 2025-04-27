@@ -174,6 +174,11 @@ namespace AirPlay.Listeners
                         // Dequeue all frames in queue
                         while ((audiobuf = RaopBufferDequeue(_raopBuffer, ref audiobuflen, ref timestamp, no_resend)) != null)
                         {
+                            if (audiobuf.Length == 0)
+                            {
+                                continue; // Skip empty buffers
+                            }
+
                             var pcmData = new PcmData();
                             pcmData.Length = 960;
                             pcmData.Data = audiobuf;
@@ -376,6 +381,7 @@ namespace AirPlay.Listeners
                 {
                     /* Return nothing and hope resend gets on time */
                     length = entry.AudioBufferSize;
+                    return Array.Empty<byte>();
                     Array.Fill<byte>(entry.AudioBuffer, 0, 0, length);
 
                     return entry.AudioBuffer;
@@ -389,6 +395,7 @@ namespace AirPlay.Listeners
             {
                 /* Return an empty audio buffer to skip audio */
                 length = entry.AudioBufferSize;
+                return Array.Empty<byte>();
                 Array.Fill<byte>(entry.AudioBuffer, 0, 0, length);
 
                 return entry.AudioBuffer;
@@ -414,11 +421,8 @@ namespace AirPlay.Listeners
                 raop_buffer.Entries[i].Available = false;
                 raop_buffer.Entries[i].AudioBufferLen = 0;
             }
-            if (next_seq < 0 || next_seq > 0xffff)
-            {
-                raop_buffer.IsEmpty = true;
-            }
-            else
+            raop_buffer.IsEmpty = true;
+            if (next_seq > 0 && next_seq < 0xffff)
             {
                 raop_buffer.FirstSeqNum = (ushort)next_seq;
                 raop_buffer.LastSeqNum = (ushort)(next_seq - 1);
@@ -508,16 +512,17 @@ namespace AirPlay.Listeners
             }
             else if(audioFormat == AudioFormat.AAC_ELD)
             {
+                throw new Exception("AAC-ELD is not supported currently.");
                 // RTP info: 96 mpeg4-generic/44100/2, 96 mode=AAC-eld; constantDuration=480
                 // (AAC-ELD -> PCM)
 
-                var frameLength = 480;
-                var numChannels = 2;
-                var bitDepth = 16;
-                var sampleRate = 44100;
+                //var frameLength = 480;
+                //var numChannels = 2;
+                //var bitDepth = 16;
+                //var sampleRate = 44100;
 
-                _decoder = new AACDecoder(_clConfig.AACLibPath, TransportType.TT_MP4_RAW, AudioObjectType.AOT_ER_AAC_ELD, 1);
-                _decoder.Config(sampleRate, numChannels, bitDepth, frameLength);
+                //_decoder = new AACDecoder(_clConfig.AACLibPath, TransportType.TT_MP4_RAW, AudioObjectType.AOT_ER_AAC_ELD, 1);
+                //_decoder.Config(sampleRate, numChannels, bitDepth, frameLength);
             }
             else
             {
