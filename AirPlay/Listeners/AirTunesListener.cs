@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Plists;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,6 +12,7 @@ using AirPlay.Models.Configs;
 using AirPlay.Models.Enums;
 using AirPlay.Services.Implementations;
 using AirPlay.Utils;
+using Claunia.PropertyList;
 using org.whispersystems.curve25519;
 
 namespace AirPlay.Listeners
@@ -127,17 +127,24 @@ namespace AirPlay.Listeners
                 dict.Add("macAddress", "78:7B:8A:BD:C9:4D");
 
                 var output = default(byte[]);
-                using (var outputStream = new MemoryStream())
-                {
-                    var plistWriter = new BinaryPlistWriter();
-                    plistWriter.WriteObject(outputStream, dict, false);
-                    outputStream.Seek(0, SeekOrigin.Begin);
 
-                    output = outputStream.ToArray();
-                }
+                // OLD CODE using homemade plist writer
+                //using (var outputStream = new MemoryStream())
+                //{
+                //    var plistWriter = new BinaryPlistWriter();
+                //    plistWriter.WriteObject(outputStream, dict, false);
+                //    outputStream.Seek(0, SeekOrigin.Begin);
+
+                //    output = outputStream.ToArray();
+                //}
+
+                // New Code using plist-cli
+                var binaryPlist = NSObject.Wrap(dict);
+                var plistBytes = BinaryPropertyListWriter.WriteToArray(binaryPlist);
 
                 response.Headers.Add("Content-Type", "application/x-apple-binary-plist");
-                await response.WriteAsync(output, 0, output.Length).ConfigureAwait(false);
+                //await response.WriteAsync(output, 0, output.Length).ConfigureAwait(false);
+                await response.WriteAsync(plistBytes, 0, plistBytes.Length).ConfigureAwait(false);
             }
             if (request.Type == RequestType.POST && "/pair-setup".Equals(request.Path, StringComparison.OrdinalIgnoreCase))
             {
@@ -282,16 +289,17 @@ namespace AirPlay.Listeners
                 }
                 else
                 {
-                    var plistReader = new BinaryPlistReader();
                     using (var mem = new MemoryStream(request.Body))
                     {
-                        var plist = plistReader.ReadObject(mem);
+                        var nsDict = PropertyListParser.Parse(mem) as NSDictionary;
+                        var plistDict = nsDict.ToDictionary();
 
-                        if (plist.Contains("streams"))
+                        if (plistDict.ContainsKey("streams"))
                         {
                             // Always one foreach request
-                            var stream = (Dictionary<object, object>)((object[])plist["streams"])[0];
-                            var type = (short)stream["type"];
+                            // plistDict["streams"] is an array. The first element of that array is a dict that we are looking for.
+                            var stream = (Dictionary<string, object>)((object[])plistDict["streams"].ToObject())[0];
+                            short type = Convert.ToInt16((int)stream["type"]);
 
                             // If screen Mirroring
                             if (type == 110)
@@ -299,14 +307,14 @@ namespace AirPlay.Listeners
                                 session.StreamConnectionId = unchecked((ulong)(System.Int64)stream["streamConnectionID"]).ToString();
 
                                 // Set video data port
-                                var streams = new Dictionary<string, List<Dictionary<string, int>>>()
+                                var streams = new Dictionary<string, List<Dictionary<string, object>>>()
                                 {
                                     {
                                         "streams",
-                                        new List<Dictionary<string, int>>
+                                        new List<Dictionary<string, object>>
                                         {
                                             {
-                                                new Dictionary<string, int>
+                                                new Dictionary<string, object>
                                                 {
                                                     { "type", 110 },
                                                     { "dataPort", _airPlayPort }
@@ -316,18 +324,22 @@ namespace AirPlay.Listeners
                                     }
                                 };
 
-                                byte[] output;
-                                using (var outputStream = new MemoryStream())
-                                {
-                                    var writerRes = new BinaryPlistWriter();
-                                    writerRes.WriteObject(outputStream, streams, false);
-                                    outputStream.Seek(0, SeekOrigin.Begin);
+                                // Old code using homemade plist writer
+                                //byte[] output;
+                                //using (var outputStream = new MemoryStream())
+                                //{
+                                //    var writerRes = new BinaryPlistWriter();
+                                //    writerRes.WriteObject(outputStream, streams, false);
+                                //    outputStream.Seek(0, SeekOrigin.Begin);
 
-                                    output = outputStream.ToArray();
-                                }
+                                //    output = outputStream.ToArray();
+                                //}
+
+                                var binaryPlist = NSObject.Wrap(streams);
+                                var plistBytes = BinaryPropertyListWriter.WriteToArray(binaryPlist);
 
                                 response.Headers.Add("Content-Type", "application/x-apple-binary-plist");
-                                await response.WriteAsync(output, 0, output.Length).ConfigureAwait(false);
+                                await response.WriteAsync(plistBytes, 0, plistBytes.Length).ConfigureAwait(false);
                             }
                             // If audio session
                             if (type == 96)
@@ -343,18 +355,18 @@ namespace AirPlay.Listeners
                                 if (stream.ContainsKey("controlPort"))
                                 {
                                     // Use this port to request resend lost packet? (remote port)
-                                    var controlPort = (ushort)((short)stream["controlPort"]);
+                                    var controlPort = Convert.ToUInt16((int)stream["controlPort"]);
 
                                 }
                                 // Set audio data port
-                                var streams = new Dictionary<string, List<Dictionary<string, int>>>()
+                                var streams = new Dictionary<string, List<Dictionary<string, object>>>()
                                 {
                                     {
                                         "streams",
-                                        new List<Dictionary<string, int>>
+                                        new List<Dictionary<string, object>>
                                         {
                                             {
-                                                new Dictionary<string, int>
+                                                new Dictionary<string, object>
                                                 {
                                                     { "type", 96 },
                                                     { "controlPort", 7002 },
@@ -365,61 +377,85 @@ namespace AirPlay.Listeners
                                     }
                                 };
 
-                                byte[] output;
-                                using (var outputStream = new MemoryStream())
-                                {
-                                    var writerRes = new BinaryPlistWriter();
-                                    writerRes.WriteObject(outputStream, streams, false);
-                                    outputStream.Seek(0, SeekOrigin.Begin);
+                                // Old code using homemade plist writer
+                                //byte[] output;
+                                //using (var outputStream = new MemoryStream())
+                                //{
+                                //    var writerRes = new BinaryPlistWriter();
+                                //    writerRes.WriteObject(outputStream, streams, false);
+                                //    outputStream.Seek(0, SeekOrigin.Begin);
 
-                                    output = outputStream.ToArray();
-                                }
+                                //    output = outputStream.ToArray();
+                                //}
+
+                                // The NSObject.Wrap method cant handle these nested dicts and lists very well, so lets wrap and nest them ourselves.
+                                var streamDict = new Dictionary<string, object>
+                                {
+                                    { "type", 96 },
+                                    { "controlPort", 7002 },
+                                    { "dataPort", 7003 }
+                                };
+                                var streamDictNsObj = NSObject.Wrap(streamDict);
+                                var streamsList = new NSArray(streamDictNsObj);
+                                var streamsDict = new NSDictionary(1)
+                                {
+                                    { "streams", streamsList }
+                                };
+
+                                var plistBytes = BinaryPropertyListWriter.WriteToArray(streamsDict);
 
                                 response.Headers.Add("Content-Type", "application/x-apple-binary-plist");
-                                await response.WriteAsync(output, 0, output.Length).ConfigureAwait(false);
+                                await response.WriteAsync(plistBytes, 0, plistBytes.Length).ConfigureAwait(false);
                             }
                         }
                         else
                         {
                             // Read ekey and eiv used to decode video and audio data
-                            if (plist.Contains("et"))
+                            if (plistDict.ContainsKey("et"))
                             {
-                                var et = (short)plist["et"];
+                                // plist-cil only handles int and long from NSNumber, converting to short from int should be OK.
+                                var et = Convert.ToInt16((int)plistDict["et"].ToObject());
                                 Console.WriteLine($"ET: {et}");
                             }
-                            if (plist.Contains("ekey"))
+                            if (plistDict.ContainsKey("ekey"))
                             {
-                                session.AesKey = (byte[])plist["ekey"];
+                                session.AesKey = (byte[])plistDict["ekey"].ToObject();
                             }
-                            if (plist.Contains("eiv"))
+                            if (plistDict.ContainsKey("eiv"))
                             {
-                                session.AesIv = (byte[])plist["eiv"];
+                                session.AesIv = (byte[])plistDict["eiv"].ToObject();
                             }
-                            if (plist.Contains("isScreenMirroringSession"))
+                            if (plistDict.ContainsKey("isScreenMirroringSession"))
                             {
-                                session.MirroringSession = (bool)plist["isScreenMirroringSession"];
+                                session.MirroringSession = (bool)plistDict["isScreenMirroringSession"].ToObject();
                             }
-                            if (plist.Contains("timingPort"))
+                            if (plistDict.ContainsKey("timingPort"))
                             {
                                 // Use this port to send heartbeat (remote port)
-                                var timingPort = (ushort)((short)plist["timingPort"]);
+                                var timingPort = Convert.ToUInt16((int)plistDict["timingPort"].ToObject());
                             }
 
-                            var dict = new Dictionary<string, int>()
+                            var dict = new Dictionary<string, object>()
                             {
-                                { "timingPort", _airTunesPort },
-                                { "eventPort", _airTunesPort }
+                                // Original code used ushort (appropriate for ports) but this isnt actually
+                                // differentiable from int in the plist format.
+                                { "timingPort", (int)_airTunesPort },
+                                { "eventPort", (int)_airTunesPort }
                             };
 
-                            byte[] output;
-                            using (var outputStream = new MemoryStream())
-                            {
-                                var writerRes = new BinaryPlistWriter();
-                                writerRes.WriteObject(outputStream, dict, false);
-                                outputStream.Seek(0, SeekOrigin.Begin);
+                            // Old code using homemade plist writer
+                            //byte[] output;
+                            //using (var outputStream = new MemoryStream())
+                            //{
+                            //    var writerRes = new BinaryPlistWriter();
+                            //    writerRes.WriteObject(outputStream, dict, false);
+                            //    outputStream.Seek(0, SeekOrigin.Begin);
 
-                                output = outputStream.ToArray();
-                            }
+                            //    output = outputStream.ToArray();
+                            //}
+
+                            var binaryPlist = NSObject.Wrap(dict);
+                            var output = BinaryPropertyListWriter.WriteToArray(binaryPlist);
 
                             response.Headers.Add("Content-Type", "application/x-apple-binary-plist");
                             await response.WriteAsync(output, 0, output.Length).ConfigureAwait(false);
@@ -477,7 +513,7 @@ namespace AirPlay.Listeners
                     {
                         var body = Encoding.ASCII.GetString(request.Body);
                         var keyPair = body.Split(":", StringSplitOptions.RemoveEmptyEntries).Select(b => b.Trim(' ', '\r', '\n')).ToArray();
-                        if(keyPair.Length == 2)
+                        if (keyPair.Length == 2)
                         {
                             var key = keyPair[0];
                             var val = keyPair[1];
@@ -512,15 +548,15 @@ namespace AirPlay.Listeners
                     }
                 }
             }
-            if(request.Type == RequestType.OPTIONS)
+            if (request.Type == RequestType.OPTIONS)
             {
                 response.Headers.Add("Public", "SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER, ANNOUNCE");
             }
-            if(request.Type == RequestType.ANNOUNCE)
+            if (request.Type == RequestType.ANNOUNCE)
             {
 
             }
-            if(request.Type == RequestType.FLUSH)
+            if (request.Type == RequestType.FLUSH)
             {
                 int next_seq = -1;
 
@@ -545,16 +581,15 @@ namespace AirPlay.Listeners
             }
             if (request.Type == RequestType.TEARDOWN)
             {
-                var plistReader = new BinaryPlistReader();
                 using (var mem = new MemoryStream(request.Body))
                 {
-                    var plist = plistReader.ReadObject(mem);
+                    var plist = BinaryPropertyListParser.Parse(mem) as NSDictionary;
 
-                    if (plist.Contains("streams"))
+                    if (plist.ContainsKey("streams"))
                     {
                         // Always one foreach request
-                        var stream = (Dictionary<object, object>)((object[])plist["streams"]).Last();
-                        var type = (short)stream["type"];
+                        var stream = (Dictionary<string, object>)((object[])plist["streams"].ToObject()).Last();
+                        var type = Convert.ToInt16((int)stream["type"]);
 
                         // If screen Mirroring
                         if (type == 110)
