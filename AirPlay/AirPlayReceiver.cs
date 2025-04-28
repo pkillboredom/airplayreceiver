@@ -82,14 +82,14 @@ namespace AirPlay
             // Internally 'ServiceProfile' create the SRV record
             var airTunes = new ServiceProfile($"{deviceIdInstance}@{_instance}", AirTunesType, _airTunesPort);
             airTunes.AddProperty("ch", "2");
-            airTunes.AddProperty("cn", "2,3");
-            airTunes.AddProperty("et", "0,3,5");
-            airTunes.AddProperty("md", "0,1,2");
-            airTunes.AddProperty("sr", "44100");
-            airTunes.AddProperty("ss", "16");
-            airTunes.AddProperty("da", "true");
-            airTunes.AddProperty("sv", "false");
-            airTunes.AddProperty("ft", "0x5A7FFFF7,0x1E"); // 0x4A7FFFF7, 0xE
+            airTunes.AddProperty("cn", "1,2"); // 0=pcm, 1=alac, 2=aac, 3=aac-eld (not supported here)
+            airTunes.AddProperty("et", "0,3,5"); // 0=none, 1=rsa (airport express), 3=fairplay, 4=MFiSAP, 5=fairplay SAPv2.5
+            airTunes.AddProperty("md", "0,1,2"); // 0=text, 1=artwork, 2=progress
+            airTunes.AddProperty("sr", "44100"); // sample rate
+            airTunes.AddProperty("ss", "16"); // bitdepth
+            airTunes.AddProperty("da", "true"); // unk
+            airTunes.AddProperty("sv", "false"); // unk
+            airTunes.AddProperty("ft", "0x5A7FDE40,0x1C"); // originally "0x5A7FFFF7,0x1E" https://openairplay.github.io/airplay-spec/features.html
             airTunes.AddProperty("am", "AppleTV5,3");
             airTunes.AddProperty("pk", "29fbb183a58b466e05b9ab667b3c429d18a6b785637333d3f0f3a34baa89f45e");
             airTunes.AddProperty("sf", "0x4");
@@ -111,7 +111,7 @@ namespace AirPlay
             // Internally 'ServiceProfile' create the SRV record
             var airPlay = new ServiceProfile(_instance, AirPlayType, _airPlayPort);
             airPlay.AddProperty("deviceid", _deviceId);
-            airPlay.AddProperty("features", "0x5A7FFFF7,0x1E"); // 0x4A7FFFF7
+            airPlay.AddProperty("features", "0x5A7FDE40,0x1C"); // originally "0x5A7FFFF7,0x1E" https://openairplay.github.io/airplay-spec/features.html
             airPlay.AddProperty("flags", "0x4");
             airPlay.AddProperty("model", "AppleTV5,3");
             airPlay.AddProperty("pk", "29fbb183a58b466e05b9ab667b3c429d18a6b785637333d3f0f3a34baa89f45e");
