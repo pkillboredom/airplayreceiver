@@ -25,19 +25,15 @@ As I do not require any video features for my intended downstream application, I
 ### Completed
 - Replaced SteeBono's plist implementation with plist-cil. Needed due to its use of BinaryFormatter.
   - This is currently using a fork but a PR is open.
-- Replaced FDK-AAC with SharpJaad, a fully .NET implementation of AAC.
-- Replaced the very specific version of ALAC used by SteeBono with LibALAC. Unfortunately this limits the project to Windows for the time being.
+- Replaced decoding libraries with ones that are simple downloads from NuGet.
 - Updated to .NET 8.
-- Updated some dependencies.
+- Updated or replaced some other dependencies.
 - Fixed a buffer bug when pausing audio.
-  - Bug caused no audio to be captured after a pause and resume.
-  - Bug also caused massive memory leak.
+- Removed video related feature flags since I will not be making use of them.
 
 ### To Do
-- Replace the ancient NaCl port in use (depends on .NET Core 2 libraries).
 - Turn this from an application into a library.
   - Create a new demo app.
   - Expose volume changes as an event.
-- Comment out video features.
 - Clean up code.
 - Appear to clients as a speaker instead of an Apple TV.

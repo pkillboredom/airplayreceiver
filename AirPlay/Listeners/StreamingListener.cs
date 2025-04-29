@@ -10,7 +10,6 @@ using AirPlay.Models;
 using AirPlay.Models.Enums;
 using AirPlay.Services.Implementations;
 using AirPlay.Utils;
-using org.whispersystems.curve25519;
 
 namespace AirPlay.Listeners
 {
@@ -80,13 +79,16 @@ namespace AirPlay.Listeners
                         session.EcdhTheirs = reader.ReadBytes(32);
                         session.EdTheirs = reader.ReadBytes(32);
 
-                        var curve25519 = Curve25519.getInstance(Curve25519.BEST);
-                        var curve25519KeyPair = curve25519.generateKeyPair();
+                        // Commented out code relies on curve25519-pcl which has very outdated dependencies.
+                        //var curve25519 = Curve25519.getInstance(Curve25519.BEST);
+                        //var curve25519KeyPair = curve25519.generateKeyPair();
 
-                        session.EcdhOurs = curve25519KeyPair.getPublicKey();
-                        var ecdhPrivateKey = curve25519KeyPair.getPrivateKey();
+                        //session.EcdhOurs = curve25519KeyPair.getPublicKey();
+                        //var ecdhPrivateKey = curve25519KeyPair.getPrivateKey();
+                        (var ecdhPrivateKey, session.EcdhOurs) = NaCl.Curve25519XSalsa20Poly1305.KeyPair();
 
-                        session.EcdhShared = curve25519.calculateAgreement(ecdhPrivateKey, session.EcdhTheirs);
+                        //session.EcdhShared = curve25519.calculateAgreement(ecdhPrivateKey, session.EcdhTheirs);
+                        session.EcdhShared = NaCl.Curve25519.ScalarMultiplication(ecdhPrivateKey, session.EcdhTheirs);
 
                         var aesCtr128Encrypt = Utilities.InitializeChiper(session.EcdhShared);
 
