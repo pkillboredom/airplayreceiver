@@ -6,7 +6,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
-    <DefineConstants>TRACE;DEBUG;NETCOREAPP;NETCOREAPP2_2;DUMP</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;<!--DUMP--></DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -29,9 +29,17 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
     <PackageReference Include="NaCl.Net" Version="0.1.13" />
     <PackageReference Include="NETStandard.Library" Version="2.0.3" />
+    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
     <PackageReference Include="RtspClientSharp" Version="1.3.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SharpJaad.AAC" Version="0.0.6" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Aes128CounterMode.cs.txt" />
@@ -58,6 +66,7 @@
     <Folder Include="Models\TcpListeners\" />
     <Folder Include="Models\Mirroring\" />
     <Folder Include="Models\Audio\" />
+    <Folder Include="Telemetry\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Crypto\Aes128CounterMode.cs" />
