@@ -15,55 +15,16 @@ namespace AirPlay
     // was unsafe
     public class AACDecoder : IDecoder//, IDisposable
     {
-        //private IntPtr _handle;
-        //private IntPtr _decoder;
-
-        //private delegate IntPtr aacDecoder_Open(int transportFmt, uint nrOfLayers);
-        //private delegate AACDecoderError aacDecoder_ConfigRaw(IntPtr decoder, IntPtr[] conf, uint *length);
-        //private delegate AACDecoderError aacDecoder_Fill(IntPtr decoder, IntPtr[] pBuffer, uint *bufferSize, uint *pBytesValid);
-        //private delegate AACDecoderError aacDecoder_DecodeFrame(IntPtr decoder, IntPtr output, int pcm_pkt_size, uint flags);
-        //private delegate IntPtr aacDecoder_Close(IntPtr decoder);
-
-        //private aacDecoder_Open _aacDecoder_Open;
-        //private aacDecoder_ConfigRaw _aacDecoder_ConfigRaw;
-        //private aacDecoder_Fill _aacDecoder_Fill;
-        //private aacDecoder_DecodeFrame _aacDecoder_DecodeFrame;
-        //private aacDecoder_Close _aacDecoder_Close;
-
         private Decoder _jaadDecoder;
         private DecoderConfig _decoderConfig;
         private SampleBuffer _outputBuffer = new SampleBuffer();
 
         private int _pcmPktSize;
 
-        public AudioFormat Type => /*_decoderConfig.GetProfile() == AudioObjectType.AOT_ER_AAC_ELD ? AudioFormat.AAC_ELD : */ AudioFormat.AAC;
+        public AudioFormat Type => AudioFormat.AAC;
 
-        public AACDecoder(string libraryPath, TransportType transportFmt, AudioObjectType audioObjectType, uint nrOfLayers)
+        public AACDecoder(TransportType transportFmt, AudioObjectType audioObjectType, uint nrOfLayers)
         {
-            //if (!File.Exists(libraryPath))
-            //{
-            //    throw new IOException("Library not found.");
-            //}
-
-            //// Open library
-            //_handle = LibraryLoader.DlOpen(libraryPath, 0);
-
-            //// Get function pointers symbols
-            //IntPtr symAacDecoder_Open = LibraryLoader.DlSym(_handle, "aacDecoder_Open");
-            //IntPtr symAacDecoder_ConfigRaw = LibraryLoader.DlSym(_handle, "aacDecoder_ConfigRaw");
-            //IntPtr sysAacDecoder_GetStreamInfo = LibraryLoader.DlSym(_handle, "aacDecoder_GetStreamInfo");
-            //IntPtr sysAacDecoder_Fill = LibraryLoader.DlSym(_handle, "aacDecoder_Fill");
-            //IntPtr sysAacDecoder_DecodeFrame = LibraryLoader.DlSym(_handle, "aacDecoder_DecodeFrame");
-            //IntPtr sysAacDecoder_Close = LibraryLoader.DlSym(_handle, "aacDecoder_Close");
-
-            //// Get delegates for the function pointers
-            //_aacDecoder_Open = Marshal.GetDelegateForFunctionPointer<aacDecoder_Open>(symAacDecoder_Open);
-            //_aacDecoder_ConfigRaw = Marshal.GetDelegateForFunctionPointer<aacDecoder_ConfigRaw>(symAacDecoder_ConfigRaw);
-            //_aacDecoder_Fill = Marshal.GetDelegateForFunctionPointer<aacDecoder_Fill>(sysAacDecoder_Fill);
-            //_aacDecoder_DecodeFrame = Marshal.GetDelegateForFunctionPointer<aacDecoder_DecodeFrame>(sysAacDecoder_DecodeFrame);
-            //_aacDecoder_Close = Marshal.GetDelegateForFunctionPointer<aacDecoder_Close>(sysAacDecoder_Close);
-
-            //_decoder = _aacDecoder_Open((int)transportFmt, nrOfLayers);
             var decoderConfig = new DecoderConfig();
             if (GetProfileFromAudioObjectType(audioObjectType) is Profile profile)
             {
@@ -74,22 +35,12 @@ namespace AirPlay
                 throw new NotSupportedException($"AudioObjectType {audioObjectType} is not supported.");
             }
 
-            // It looks like you can only set config once so don't instantiate this outside the config method,
-            // lest we become confused about it later.
-            //_jaadDecoder = new Decoder(decoderConfig);
-
-            //_audioObjectType = audioObjectType;
+            _decoderConfig = decoderConfig;
         }
 
         public int Config(int sampleRate, int channels, int bitDepth, int frameLength)
         {
             _pcmPktSize = frameLength * channels * bitDepth / 8;
-
-            //var frequencyIndex = Enum.Parse<FrequencyIndex>($"F_{sampleRate}", true);
-
-            //var config = AudioSpecificConfig((int)_audioObjectType, (int)frequencyIndex, channels, bitDepth);
-
-            //return Config(config);
 
             var jaadSampleRate = SampleFrequencyExtensions.FromFrequency(sampleRate);
             _decoderConfig.SetSampleFrequency(jaadSampleRate);
@@ -111,30 +62,6 @@ namespace AirPlay
             return _pcmPktSize;
         }
 
-        //public int DecodeFrame(byte[] input, ref byte[] output, int pcm_pkt_size)
-        //{
-        //    AACDecoderError ret;
-        //    uint pkt_size = (uint)input.Length;
-        //    uint valid_size = (uint)input.Length;
-        //    uint fdk_flags = 0;
-
-        //    ret = Fill(_decoder, input, pkt_size, valid_size);
-        //    if(ret != AACDecoderError.AAC_DEC_OK)
-        //    {
-        //        Console.WriteLine($"aacDecoder_Fill error: {ret}");
-        //        return (int)ret;
-        //    }
-
-        //    ret = InternalDecodeFrame(ref output, pcm_pkt_size, fdk_flags);
-        //    if (ret != AACDecoderError.AAC_DEC_OK)
-        //    {
-        //        Console.WriteLine($"aacDecoder_DecodeFrame error: {ret}");
-        //        return (int)ret;
-        //    }
-
-        //    return (int)ret;
-        //}
-
         public int DecodeFrame(byte[] input, ref byte[] output, int length)
         {
             if (_jaadDecoder == null)
@@ -145,98 +72,6 @@ namespace AirPlay
             Array.Copy(_outputBuffer.Data, output, _outputBuffer.Data.Length);
             return 0;
         }
-
-        //public void Dispose()
-        //{
-        //    _aacDecoder_Close(_decoder);
-        //    LibraryLoader.DlClose(_handle);
-        //    Marshal.FreeBSTR(_handle);
-        //}
-
-        //private AACDecoderError Fill(IntPtr decoder, byte[] pBuffer, uint bufferSize, uint pBytesValid)
-        //{
-        //    var size = Marshal.SizeOf(pBuffer[0]) * pBuffer.Length;
-        //    var ptr = Marshal.AllocHGlobal(size);
-        //    Marshal.Copy(pBuffer, 0, ptr, pBuffer.Length);
-
-        //    var byteArrayPtr = new IntPtr[]
-        //    {
-        //        ptr
-        //    };
-
-        //    var res = _aacDecoder_Fill(decoder, byteArrayPtr, &bufferSize, &pBytesValid);
-
-        //    return res;
-        //}
-
-        //private AACDecoderError InternalDecodeFrame(ref byte[] output, int pcm_pkt_size, uint flags)
-        //{
-        //    int size = Marshal.SizeOf(output[0]) * output.Length;
-        //    IntPtr ptr = Marshal.AllocHGlobal(size);
-
-        //    AACDecoderError res;
-        //    try
-        //    {
-        //        res = _aacDecoder_DecodeFrame(_decoder, ptr, pcm_pkt_size, flags);
-        //        if (res == AACDecoderError.AAC_DEC_OK)
-        //        {
-        //            Marshal.Copy(ptr, output, 0, pcm_pkt_size);
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        if (ptr != IntPtr.Zero)
-        //            Marshal.FreeHGlobal(ptr);
-        //    }
-
-        //    return res;
-        //}
-
-        //private byte[] AudioSpecificConfig(int audioObjectType, int frequenceIndex, int channels, int bitDepth)
-        //{
-        //    string bin;
-        //    if (audioObjectType >= 31)
-        //    {
-        //        bin = Convert.ToString(31, 2).PadLeft(5, '0');
-        //        bin += Convert.ToString(audioObjectType - 32, 2).PadLeft(6, '0');
-        //    }
-        //    else
-        //    {
-        //        bin = Convert.ToString(audioObjectType, 2).PadLeft(5, '0');
-        //    }
-
-        //    bin += Convert.ToString(frequenceIndex, 2).PadLeft(4, '0');
-        //    bin += Convert.ToString(channels, 2).PadLeft(4, '0');
-        //    bin += Convert.ToString(bitDepth, 2).PadLeft(5, '0');
-        //    bin += "00000000";
-
-        //    int nBytes = bin.Length / 8;
-        //    byte[] bytes = new byte[nBytes];
-        //    for (int i = 0; i < nBytes; i++)
-        //    {
-        //        bytes[i] = Convert.ToByte(bin.Substring(8 * i, 8), 2);
-        //    }
-
-        //    return bytes;
-        //}
-
-        //private int Config(byte[] config)
-        //{
-        //    uint length = (uint)config.Length;
-
-        //    var size = Marshal.SizeOf(config[0]) * config.Length;
-        //    var ptr = Marshal.AllocHGlobal(size);
-        //    Marshal.Copy(config, 0, ptr, config.Length);
-
-        //    var byteArrayPtr = new IntPtr[]
-        //    {
-        //        ptr
-        //    };
-
-        //    var res = _aacDecoder_ConfigRaw(_decoder, byteArrayPtr, &length);
-
-        //    return (int)res;
-        //}
 
         /// <summary>
         /// Maps an AudioObjectType to the corresponding Profile in SharpJaad.AAC.
@@ -282,90 +117,6 @@ namespace AirPlay
                 _ => null // No mapping for other channel counts
             };
         }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct CStreamInfo
-    {
-        public int sampleRate; /*!< The sample rate in Hz of the decoded PCM audio signal. */
-        public int frameSize;  /*!< The frame size of the decoded PCM audio signal. \n
-                       Typically this is: \n
-                       1024 or 960 for AAC-LC \n
-                       2048 or 1920 for HE-AAC (v2) \n
-                       512 or 480 for AAC-LD and AAC-ELD \n
-                       768, 1024, 2048 or 4096 for USAC  */
-        public int numChannels; /*!< The number of output audio channels before the rendering
-                      module, i.e. the original channel configuration. */
-
-        IntPtr pChannelType; /*!< Audio channel type of each output audio channel. */
-
-        IntPtr pChannelIndices; /*c!< Audio channel index for each output audio
-                                    hannel. See ISO/IEC 13818-7:2005(E), 8.5.3.2
-                                    Explicit channel mapping using a
-                                    program_config_element() */
-
-        /* Decoder internal members. */
-        public int aacSampleRate; /*!< Sampling rate in Hz without SBR (from configuration
-                        info) divided by a (ELD) downscale factor if present. */
-        public int profile; /*!< MPEG-2 profile (from file header) (-1: not applicable (e. g.
-                  MPEG-4)).               */
-        public AudioObjectType aot; /*!< Audio Object Type (from ASC): is set to the appropriate value
-          for MPEG-2 bitstreams (e. g. 2 for AAC-LC). */
-        public int channelConfig; /*!< Channel configuration (0: PCE defined, 1: mono, 2:
-                        stereo, ...                       */
-        public int bitRate;       /*!< Instantaneous bit rate.                   */
-        public int aacSamplesPerFrame;   /*!< Samples per frame for the AAC core (from ASC)
-                               divided by a (ELD) downscale factor if present. \n
-                                 Typically this is (with a downscale factor of 1):
-                               \n   1024 or 960 for AAC-LC \n   512 or 480 for
-                               AAC-LD   and AAC-ELD         */
-        public int aacNumChannels;       /*!< The number of audio channels after AAC core
-                               processing (before PS or MPS processing).       CAUTION: This
-                               are not the final number of output channels! */
-        public AudioObjectType extAot; /*!< Extension Audio Object Type (from ASC)   */
-        public int extSamplingRate; /*!< Extension sampling rate in Hz (from ASC) divided by
-                          a (ELD) downscale factor if present. */
-
-        public uint outputDelay; /*!< The number of samples the output is additionally
-                       delayed by.the decoder. */
-        public uint flags; /*!< Copy of internal flags. Only to be written by the decoder,
-                 and only to be read externally. */
-
-        public byte epConfig; /*!< epConfig level (from ASC): only level 0 supported, -1
-                     means no ER (e. g. AOT=2, MPEG-2 AAC, etc.)  */
-        /* Statistics */
-        public int numLostAccessUnits; /*!< This integer will reflect the estimated amount of
-                             lost access units in case aacDecoder_DecodeFrame()
-                               returns AAC_DEC_TRANSPORT_SYNC_ERROR. It will be
-                             < 0 if the estimation failed. */
-
-        public long numTotalBytes; /*!< This is the number of total bytes that have passed
-                          through the decoder. */
-        public long numBadBytes; /*!< This is the number of total bytes that were considered
-                  with errors from numTotalBytes. */
-        public long numTotalAccessUnits;     /*!< This is the number of total access units that
-                              have passed through the decoder. */
-        public long numBadAccessUnits; /*!< This is the number of total access units that
-                              were considered with errors from numTotalBytes. */
-
-        /* Metadata */
-        public byte drcProgRefLev; /*!< DRC program reference level. Defines the reference
-                          level below full-scale. It is quantized in steps of
-                          0.25dB. The valid values range from 0 (0 dBFS) to 127
-                          (-31.75 dBFS). It is used to reflect the average
-                          loudness of the audio in LKFS according to ITU-R BS
-                          1770. If no level has been found in the bitstream the
-                          value is -1. */
-        public byte drcPresMode; /*!< DRC presentation mode. According to ETSI TS 101 154,
-                  this field indicates whether   light (MPEG-4 Dynamic Range
-                  Control tool) or heavy compression (DVB heavy
-                  compression)   dynamic range control shall take priority
-                  on the outputs.   For details, see ETSI TS 101 154, table
-                  C.33. Possible values are: \n   -1: No corresponding
-                  metadata found in the bitstream \n   0: DRC presentation
-                  mode not indicated \n   1: DRC presentation mode 1 \n   2:
-                  DRC presentation mode 2 \n   3: Reserved */
-
     }
 
     public enum TransportType

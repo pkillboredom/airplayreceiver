@@ -36,10 +36,9 @@ namespace AirPlay.Listeners
         private RaopBuffer _raopBuffer;
         private Socket _cSocket;
 
-        private readonly CodecLibrariesConfig _clConfig;
         private readonly DumpConfig _dConfig;
 
-        public AudioListener(IRtspReceiver receiver, string sessionId, ushort cport, ushort dport, CodecLibrariesConfig clConfig, DumpConfig dConfig) : base(cport, dport)
+        public AudioListener(IRtspReceiver receiver, string sessionId, ushort cport, ushort dport, DumpConfig dConfig) : base(cport, dport)
         {
             using var activity = AirPlayTelemetry.CreateSessionActivity(
                 "AudioListener.Constructor", 
@@ -48,7 +47,6 @@ namespace AirPlay.Listeners
 
             _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             _sessionId = sessionId ?? throw new ArgumentNullException(nameof(sessionId));
-            _clConfig = clConfig ?? throw new ArgumentNullException(nameof(clConfig));
             _dConfig = dConfig ?? throw new ArgumentNullException(nameof(dConfig));
 
             activity?.SetTag("audio.control.port", cport);
@@ -875,7 +873,7 @@ namespace AirPlay.Listeners
                     activity?.SetTag("audio.decoder.bit_depth", bitDepth);
                     activity?.SetTag("audio.decoder.sample_rate", sampleRate);
 
-                    _decoder = new ALACDecoder(_clConfig.ALACLibPath);
+                    _decoder = new ALACDecoder();
                     _decoder.Config(sampleRate, numChannels, bitDepth, frameLength);
                 }
                 else if (audioFormat == AudioFormat.AAC)
@@ -891,7 +889,7 @@ namespace AirPlay.Listeners
                     activity?.SetTag("audio.decoder.bit_depth", bitDepth);
                     activity?.SetTag("audio.decoder.sample_rate", sampleRate);
 
-                    _decoder = new AACDecoder(_clConfig.AACLibPath, TransportType.TT_MP4_RAW, AudioObjectType.AOT_AAC_MAIN, 1);
+                    _decoder = new AACDecoder(TransportType.TT_MP4_RAW, AudioObjectType.AOT_AAC_MAIN, 1);
                     _decoder.Config(sampleRate, numChannels, bitDepth, frameLength);
                 }
                 else if(audioFormat == AudioFormat.AAC_ELD)

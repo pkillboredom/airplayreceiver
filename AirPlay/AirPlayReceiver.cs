@@ -31,7 +31,7 @@ namespace AirPlay
         private readonly ushort _airPlayPort;
         private readonly string _deviceId;
 
-        public AirPlayReceiver(IOptions<AirPlayReceiverConfig> aprConfig, IOptions<CodecLibrariesConfig> codecConfig, IOptions<DumpConfig> dumpConfig)
+        public AirPlayReceiver(IOptions<AirPlayReceiverConfig> aprConfig, IOptions<DumpConfig> dumpConfig)
         {
             using var activity = AirPlayTelemetry.CreateActivity("AirPlayReceiver.Constructor", ActivityKind.Internal);
             
@@ -41,7 +41,6 @@ namespace AirPlay
                 _airPlayPort = aprConfig?.Value?.AirPlayPort ?? 7000;
                 _deviceId = aprConfig?.Value?.DeviceMacAddress ?? "11:22:33:44:55:66";
                 _instance = aprConfig?.Value?.Instance ?? throw new ArgumentNullException("apr.instance");
-                var clConfig = codecConfig?.Value ?? throw new ArgumentNullException(nameof(codecConfig));
                 var dConfig = dumpConfig?.Value ?? throw new ArgumentNullException(nameof(dumpConfig));
                 
                 // Add configuration details as tags for tracing
@@ -50,7 +49,7 @@ namespace AirPlay
                 activity?.SetTag("airplay.config.tunesPort", _airTunesPort);
                 activity?.SetTag("airplay.config.playPort", _airPlayPort);
                 
-                _airTunesListener = new AirTunesListener(this, _airTunesPort, _airPlayPort, clConfig, dConfig);
+                _airTunesListener = new AirTunesListener(this, _airTunesPort, _airPlayPort, dConfig);
                 
                 activity?.SetStatus(ActivityStatusCode.Ok);
             }
